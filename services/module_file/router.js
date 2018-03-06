@@ -8,7 +8,7 @@ var secMidd = require('../../middleware/securityMiddleware');
 //router.put('/uploadedAmazon', controller.uploadedToAmazon);
 
 /**
- * @api {get} /file/{fileId}/upload
+ * @api {post} /file/{fileId}/upload
  * Upload img -local
  * @apiVersion 1.0.0
  * @apiName Upload Localy
