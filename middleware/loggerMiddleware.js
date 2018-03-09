@@ -6,8 +6,7 @@ exports.logRequest = function(req, res, next) {
     queryParams: req.query || "",
     bodyParams: req.body || ""
   };
-//   if (data.url.indexOf('/file') == 0)
-//    logger.info(data);
+  logger.info(data);
   next();
 };
 
