@@ -198,7 +198,7 @@ router.get('/:userId/:folder/files/', secMidd.checkTokenUser, controller.filesBy
 router.delete('/:userId/delete/:fileId', secMidd.checkTokenUser, controller.deleteFile);
 
 /**
- * @api {delete} /file/{userId}/delete/{fileId}
+ * @api {delete} /file/delete/{fileId}
  * Delete file by admin
  * @apiVersion 1.0.0
  * @apiName Delete file admin
