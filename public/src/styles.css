@@ -6790,6 +6790,8 @@ body {
   font-weight: 100;
   display: inline-block;
   width: 70%;
+   overflow: hidden;
+    height: 26px;
 }
 .dashboard-page .column {
   display: flex;
