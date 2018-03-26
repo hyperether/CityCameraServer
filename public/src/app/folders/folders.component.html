@@ -40,8 +40,7 @@
               <!--<img ng-src="https://citycamera.s3.eu-central-1.amazonaws.com/{{file._id}}.{{file.ext}}" ng-if="s3Img" />-->
               <div class="info-box">
                 <span>{{file.filename}}.{{file.ext}}</span>
-                <button *ngIf="!users.user.isAdmin" class="delete-button" (click)="deleteFile(file)">Delete</button>
-                <button *ngIf="users.user.isAdmin" class="delete-button" (click)="deleteFileAdmin(file)">Delete</button>
+                <button class="delete-button" (click)="deleteFile(file)">Delete</button>
               </div>
             </div>
           </div>

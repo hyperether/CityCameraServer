@@ -1,20 +1,9 @@
-var error = require('../../lib/error').error;
+var error    = require('../../lib/error').error;
 var provider = require('./providers/');
+var folders  = require('../../lib/db/model/folders');
+var users    = require('../../lib/db/model/users');
+var moment   = require("moment");
 
-
-
-// exports.uploadedAmazon = function (req, res, next) {
-//   provider.upload(req, res).then(function (data) {
-//     res.status(200);
-//     res.json({
-//       isSuccess: true,
-//       message: 'Image uploaded!'
-//     });
-//   }).fail(function (err) {
-//     logger.error('ERROR CTRL - upload img', err);
-//     return next(err);
-//   });
-// };
 exports.upload = function (req, res, next) {
   provider.upload(req, res).then(function (data) {
     res.status(200);
@@ -22,77 +11,91 @@ exports.upload = function (req, res, next) {
       isSuccess: true,
       message: 'Image uploaded!'
     });
+    //TODO added confirmation update in DB
   }).fail(function (err) {
     logger.error('ERROR CTRL - upload img', err);
     return next(err);
   });
 };
+
 exports.getUploadURL = function (req, res, next) {
 
   var fileName = req.body.file;
-  var fileExt = req.body.ext;
-  var userId = req.params.userId;
+  var fileExt  = req.body.ext;
+  var userId   = req.params.userId;
 
-  provider.getUploadURL(userId, fileName, fileExt).then(function (url) {
-    res.status(200);
-    res.json(url);
+  folders.saveFile({
+    userId: userId,
+    filename: fileName,
+    ext: fileExt,
+    folder: moment().format('YYYY-MM-DD')
+  }).then(function (saved) {
+    provider.getUploadURL(fileExt, saved._id).then(function (url) {
+      res.json({fileId: saved._id, url: url});
+    }).fail(function (err) {
+      logger.error('ERROR CTRL - get URL to upload', err);
+      return next(err);
+    });
   }).fail(function (err) {
-    logger.error('ERROR CTRL - get URL to upload', err);
+    logger.error('ERROR Local storage - get URL to upload ', err);
     return next(err);
   });
 };
 
 exports.folders = function (req, res, next) {
-  provider.folders().then(function (folders) {
-    res.status(200);
-    res.json({
-      folders: folders
+
+  var userId   = req.params.userId;
+
+  users.findById(userId).then(function (user) {
+    if (!user) return next(error('NOT_FOUND'));
+
+    var method;
+
+    if (user.isAdmin) method = 'returnAllFolders';
+    else method = 'retrunFoldersByUserId';
+
+    folders[method](userId).then(function (folders) {
+      res.json({
+        folders: folders
+      });
+    }).fail(function (err) {
+      logger.error('ERROR list all folders ', err);
+      return next(err);
     });
+
   }).fail(function (err) {
-    logger.error('ERROR CTRL - list all folders ', err);
+    logger.error('ERROR finding user=' + userId, err);
     return next(err);
-  });
+  })
 };
-exports.foldersByUserId = function (req, res, next) {
 
-  var userId = req.params.userId;
-
-  provider.foldersByUserId(userId).then(function (folders) {
-    res.status(200);
-
-    res.json({
-      folders: folders
-    });
-  }).fail(function (err) {
-    logger.error('ERROR CTRL - list all folders by User Id', err);
-    return next(err);
-  });
-};
 
 exports.files = function (req, res, next) {
 
-  var folder = req.params.folder;
-  provider.files(folder).then(function (files) {
-    res.status(200);
-    res.json(files);
-  }).fail(function (err) {
-    logger.error('ERROR CTRL - list all files', err);
-    return next(err);
-  });
-};
-
-exports.filesByUserId = function (req, res, next) {
-
   var userId = req.params.userId;
   var folder = req.params.folder;
 
-  provider.filesByUserId(userId, folder).then(function (files) {
-    res.status(200);
-    res.json(files);
+  users.findById(userId).then(function (user) {
+    if (!user) return next(error('NOT_FOUND'));
+
+    var method;
+
+    if (user.isAdmin) method = 'retrunAllFiles';
+    else method = 'retrunFilesByUserId';
+
+    folders[method](folder).then(function (files) {
+      res.json(files);
+    }).fail(function (err) {
+      logger.error('ERROR list all files', err);
+      return next(err);
+    });
+
+
   }).fail(function (err) {
-    logger.error('ERROR CTRL - list all files by user ID', err);
+    logger.error('ERROR finding user=' + userId, err);
     return next(err);
-  });
+  })
+
 };
 
 exports.deleteFile = function (req, res, next) {
@@ -100,27 +103,29 @@ exports.deleteFile = function (req, res, next) {
   var fileId = req.params.fileId;
   var userId = req.params.userId;
 
-  provider.deleteFile(userId, fileId).then(function (err) {
-    res.status(200);
-    res.json({
-      success: true
-    });
-  }).fail(function (err) {
-    logger.error('ERROR CTRL - delete files', err);
-    return next(err);
-  });
-};
+  users.findById(userId).then(function (user) {
+    if (!user) return next(error('NOT_FOUND'));
 
-exports.adminDeleteFile = function (req, res, next) {
+    folders.findById(fileId).then(function (file) {
+      if (!file) return next(error('NOT_FOUND'));
 
-  var fileId = req.params.fileId;
-  provider.deleteFileAdmin(fileId).then(function (err) {
-    res.status(200);
-    res.json({
-       success: true
-    });
+      if (!user.isAdmin && file.userId != userId) return next(error('FORBIDDEN'));
+
+      provider.deleteFile(file._id, file.ext).then(function (err) {
+        res.json({
+          success: true
+        });
+      }).fail(function (err) {
+        logger.error('ERROR provider deleting file', err);
+        return next(err);
+      });
+
+    }).fail(function (err) {
+      logger.error('ERROR finding file for id=' + fileId, err);
+      return next(err);
+    })
   }).fail(function (err) {
-    logger.error('ERROR CTRL - delete files', err);
+    logger.error('ERROR finding user=' + userId, err);
     return next(err);
-  });
+  })
 };

@@ -17,144 +17,47 @@ var s3 = new AWS.S3({
     signatureVersion: "v4"
 });
 
-exports.getUploadURL = function (userId, fileName, fileExt) {
+exports.getUploadURL = function (fileId, fileExt) {
     var deferred = Q.defer();
 
-    folders.saveFile({
-        userId: userId,
-        filename: fileName,
-        ext: fileExt
-    }).then(function (saved) {
+    var options = {
+        Bucket: AWS_BUCKET,
+        Key: fileId + '.' + fileExt,
+        Expires: 600, //600 sec
+        ContentType: 'multipart/form-data',
+        ACL: 'public-read'
+    };
 
-        var options = {
-            Bucket: AWS_BUCKET,
-            Key: saved._id + '.' + fileExt,
-            Expires: 600, //600 sec
-            ContentType: 'multipart/form-data',
-            ACL: 'public-read'
-        };
+    s3.getSignedUrl('putObject', options, function (err, url) {
+        if (err) {
+            logger.error('ERROR S3 storage - get Signed Url', err);
+            return deferred.reject(err);
+        }
 
-        s3.getSignedUrl('putObject', options, function (err, url) {
-            if (err) {
-                logger.error('ERROR S3 storage - get Signed Url', err);
-                return deferred.reject(err);
-            }
-   
-            deferred.resolve({
-                fileId : saved._id,
-                url: url
+        deferred.resolve(url);
+    });
+
+    return deferred.promise;
+};
+
+exports.deleteFile = function (fileId, fileExt) {
+    var deferred = Q.defer();
+
+    var urlParams = {
+        Bucket: AWS_BUCKET,
+        Key: fileId + '.' + fileExt
+    };
+
+    s3.deleteObject(urlParams, function (err, data) {
+        if (err) {
+            logger.error('ERROR S3 storage - delete', err);
+            return deferred.reject(err);
+        } else {
+            folders.deleteFileByUser(fileId).then(function (data) {
+                deferred.resolve(data);
             });
-        });
-    }).fail(function (err) {
-        logger.error('ERROR S3 storage - get URL to upload and save to DB', err);
-        return deferred.reject(err);
-    });
-    return deferred.promise;
-};
-exports.folders = function () {
-    var deferred = Q.defer();
-
-    folders.returnAllFolders().then(function (data) {
-        deferred.resolve(data);
-    }).fail(function (err) {
-        logger.error('ERROR S3 storage - list all folders ', err);
-        return deferred.reject(err);
+        }
     });
 
-    return deferred.promise;
-};
-exports.foldersByUserId = function (userId) {
-    var deferred = Q.defer();
-
-    folders.retrunFoldersByUserId(userId).then(function (data) {
-        deferred.resolve(data);
-    }).fail(function (err) {
-        logger.error('ERROR S3 storage - list all folders by User Id', err);
-        return deferred.reject(err);
-    });
-
-    return deferred.promise;
-};
-
-exports.files = function (folder) {
-    var deferred = Q.defer();
-
-    folders.retrunAllFiles(folder).then(function (data) {
-        deferred.resolve(data);
-    }).fail(function (err) {
-        logger.error('ERROR S3 storage - list all files', err);
-        return deferred.reject(err);
-    });
-
-    return deferred.promise;
-}
-exports.filesByUserId = function (userId, folder) {
-    var deferred = Q.defer();
-
-    folders.retrunFilesByUserId(userId, folder).then(function (data) {
-        deferred.resolve(data);
-    }).fail(function (err) {
-        logger.error('ERROR S3 storage - list all files by User ID', err);
-        return deferred.reject(err);
-    });
-
-    return deferred.promise;
-}
-
-exports.deleteFile = function (userId, fileId) {
-    var deferred = Q.defer();
-
-    folders.findById(fileId).then(function (file) {
-
-        var urlParams = {
-            Bucket: AWS_BUCKET,
-            Key: file._id + '.' + file.ext
-        };
-
-        if (!file) return deferred.reject('ERROR Local storage - Not Found', err);
-        if (file.userId != userId) return deferred.reject('ERROR Local storage -Not Autorized', err);
-
-        s3.deleteObject(urlParams, function (err, data) {
-            if (err) {
-                logger.error('ERROR S3 storage - delete', err);
-                return deferred.reject(err);
-            } else {
-                folders.deleteFileByUser(fileId).then(function (data) {
-                    deferred.resolve(data);
-                });
-            }
-        });
-    }).fail(function (err) {
-        logger.error('ERROR S3 storage - delete', err);
-        return deferred.reject(err);
-    })
-    return deferred.promise;
-};
-exports.deleteFileAdmin = function (fileId) {
-    var deferred = Q.defer();
-
-    folders.findById(fileId).then(function (file) {
-
-        var urlParams = {
-            Bucket: AWS_BUCKET,
-            Key: file._id + '.' + file.ext
-        };
-
-        if (!file) return deferred.reject('ERROR Local storage - Not Found', err);
-
-        s3.deleteObject(urlParams, function (err, data) {
-            if (err) {
-                logger.error('ERROR S3 storage - delete', err);
-                return deferred.reject(err);
-            } else {
-                folders.deleteFileByUser(fileId).then(function (data) {
-                    deferred.resolve(data);
-                });
-            }
-        });
-    }).fail(function (err) {
-        logger.error('ERROR S3 storage - delete', err);
-        return deferred.reject(err);
-    })
     return deferred.promise;
 };

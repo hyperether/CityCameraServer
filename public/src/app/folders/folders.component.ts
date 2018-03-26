@@ -20,7 +20,6 @@ export class FoldersComponent implements OnInit {
   selected: Number;
   select;
 
-
   constructor(
     private _route: ActivatedRoute,
     private _router: Router,
@@ -33,23 +32,11 @@ export class FoldersComponent implements OnInit {
 
   ngOnInit() {
     this.users = JSON.parse(this._SesionService.getUser());
-    this.getAllFolders(this.users);
+    this.getAllFolders();
   }
-  getAllFolders(user) {
-    this._FolderService.folders().subscribe(data => {
-      if (user.user.isAdmin) {
-        this.listFolders = data.folders;
-      } else {
-        this._FolderService.getFoldersById().subscribe(folders => {
-          console.log('FOLDERS',folders)
-          if (!user.user.isAdmin) {
-            this.listFolders = folders.folders;
-          }
-        }, error => {
-          this.error = JSON.parse(error._body);
-          this._AlertService.error('Can\'t load folders' + error);
-        });
-      }
+  getAllFolders() {
+    this._FolderService.getFolders().subscribe(data => {
+      this.listFolders = data.folders;
     }, error => {
       this.error = JSON.parse(error._body);
       this._AlertService.error('Can\'t load folders' + error);
@@ -60,22 +47,12 @@ export class FoldersComponent implements OnInit {
     this.select = function (index) {
       this.selected = index;
     };
-    this._FolderService.getlistFiles(folder).subscribe(files => {
+    this._FolderService.getFilesForFolder(folder).subscribe(files => {
       if (files.path !== null) {
         this.localImg = true;
         this.s3Img = false;
       }
-      if (this.users.user.isAdmin) {
-        this.files = files.files;
-      } else {
-        this._FolderService.getFilesById(folder).subscribe(files => {
-          console.log('FILES BY IDD',files)
-          this.files = files.files;
-        }, error => {
-          this.error = JSON.parse(error._body);
-          this._AlertService.error('Can\'t load files' + error);
-        });
-      }
+      this.files = files.files;
     }, error => {
       this.error = JSON.parse(error._body);
       this._AlertService.error('Can\'t load files' + error);
@@ -85,22 +62,6 @@ export class FoldersComponent implements OnInit {
     this._ModalService.confirmThis("Are You sure you want delete this image?", () => {
       var idDb = file._id;
       this._FolderService.deleteFile(idDb).subscribe(files => {
-        let index = this.files.indexOf(file)
-        this.files.splice(index, 1);
-      }, error => {
-        this.error = JSON.parse(error._body);
-        this._AlertService.error('Can\'t delete file' + error);
-      });
-    }, () => {
-      //ACTION: Do this if user says NO
-      console.log("Do nothing");
-    })
-  }
-  deleteFileAdmin(file) {
-    this._ModalService.confirmThis("Are You sure you want delete this image?", () => {
-      var idDb = file._id;
-      //ACTION: Do this If user says YES
-      this._FolderService.deleteFileAdmin(idDb).subscribe(files => {
         let index = this.files.indexOf(file)
         this.files.splice(index, 1);
       }, error => {

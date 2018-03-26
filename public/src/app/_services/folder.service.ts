@@ -17,19 +17,12 @@ export class FolderService {
 
     ngOnInit() { };
 
-    folders() {
-        return this.http.get('/file/folders')
-            .map((res) => res.json());
-    }
-    getFoldersById() {
+    getFolders() {
         return this.http.get('/file/folders/' + this._SesionService.getUserId())
             .map((res) => res.json());
     }
-    getlistFiles(folder) {
-        return this.http.get('/file/' + folder + '/files')
-            .map((res) => res.json());
-    }
-    getFilesById(folder) {
+
+    getFilesForFolder(folder) {
         return this.http.get('/file/' + this._SesionService.getUserId() + '/' + folder + '/files')
             .map((res) => res.json());
     }
@@ -37,7 +30,5 @@ export class FolderService {
     deleteFile(fileId) {
         return this.http.delete('/file/' + this._SesionService.getUserId() + '/delete/' + fileId)
     }
-    deleteFileAdmin(fileId) {
-        return this.http.delete('/file/delete/' + fileId)
-    }
+
 }
