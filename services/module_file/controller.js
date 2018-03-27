@@ -30,7 +30,7 @@ exports.getUploadURL = function (req, res, next) {
     ext: fileExt,
     folder: moment().format('YYYY-MM-DD')
   }).then(function (saved) {
-    provider.getUploadURL(fileExt, saved._id).then(function (url) {
+    provider.getUploadURL(saved._id, fileExt).then(function (url) {
       res.json({fileId: saved._id, url: url});
     }).fail(function (err) {
       logger.error('ERROR CTRL - get URL to upload', err);
