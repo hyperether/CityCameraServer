@@ -83,7 +83,7 @@ exports.files = function (req, res, next) {
     if (user.isAdmin) method = 'retrunAllFiles';
     else method = 'retrunFilesByUserId';
 
-    folders[method](folder).then(function (files) {
+    folders[method](folder,userId).then(function (files) {
       res.json(files);
     }).fail(function (err) {
       logger.error('ERROR list all files', err);
